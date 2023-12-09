@@ -1,0 +1,6 @@
+template-arb-file: intl_zh.arb
+output-localization-file: chat_box_localizations.dart
+output-class: ChatBoxLocalizations
+preferred-supported-locales:
+  - zh
+use-deferred-loading: true
