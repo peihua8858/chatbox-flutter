@@ -16,10 +16,13 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
+import 'package:chatbox_flutter/widgets/CustomSidebarDrawer.dart';
+import 'package:chatbox_flutter/widgets/foldable_sidebar.dart';
 
 class ToggleSplashNotification extends Notification {}
 
-class HomePage extends StatefulWidget {
+class HomePage extends StatefulWidget
+   {
   const HomePage({
     super.key,
   });
@@ -28,8 +31,10 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage>  with SingleTickerProviderStateMixin{
   List<types.Message> _messages = [];
+  late AnimationController _animationController;
+  late  Animation<double> _animation;
   final _user = const types.User(
     id: '82091008-a484-4a89-ae75-a22bf8d6f3ac',
   );
@@ -37,6 +42,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _animationController =
+        AnimationController(vsync: this, duration: const Duration(milliseconds: 250));
+    _animation = Tween<double>(begin: 0, end: 200).animate(_animationController);
     _loadMessages();
   }
 
@@ -246,57 +254,115 @@ class _HomePageState extends State<HomePage> {
         ),
       ],
     );
+    final appbar=AppBar(
+      // TRY THIS: Try changing the color here to a specific color (to
+      // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+      // change color while the other colors stay the same.
+      backgroundColor: colorScheme.background,
+      // Here we take the value from the MyHomePage object that was created by
+      // the App.build method, and use it to set our appbar title.
+      title: Text(homeTitle, style: themes.appBarTheme.titleTextStyle),
+      titleTextStyle: themes.appBarTheme.titleTextStyle,
+      iconTheme: themes.appBarTheme.iconTheme,
+      actionsIconTheme: themes.appBarTheme.actionsIconTheme,
+      actions: [
+        IconButton(
+            onPressed: () {
+              //添加新会话
+            },
+            icon: const Icon(Icons.add)),
+        IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsPage()),
+              );
+            },
+            icon: const Icon(Icons.settings_applications))
+      ],
+    );
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: colorScheme.background,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(homeTitle, style: themes.appBarTheme.titleTextStyle),
-        titleTextStyle: themes.appBarTheme.titleTextStyle,
-        iconTheme: themes.appBarTheme.iconTheme,
-        actionsIconTheme: themes.appBarTheme.actionsIconTheme,
-        actions: [
-          IconButton(
-              onPressed: () {
-                //添加新会话
-              },
-              icon: const Icon(Icons.add)),
-          IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SettingsPage()),
-                );
-              },
-              icon: const Icon(Icons.settings_applications))
-        ],
-      ),
-      drawer: isDesktop
-          ? null
-          : Drawer(
+      appBar: appbar,
+      drawer: Drawer(
         backgroundColor: colorScheme.background,
         child: drawerItems,
       ),
-      body: Chat(
-        messages: _messages,
-        // onAttachmentPressed: _handleAttachmentPressed,
-        onMessageTap: _handleMessageTap,
-        onPreviewDataFetched: _handlePreviewDataFetched,
-        onSendPressed: _handleSendPressed,
-        showUserAvatars: true,
-        showUserNames: true,
-        user: _user,
-        theme: DefaultChatTheme(
-          backgroundColor: colorScheme.background,
-          seenIcon: Text(
-            'read',
-            style: textTheme.bodySmall,
+      // onDrawerChanged: (isOpened){
+      //   if (isOpened) {
+      //     _animationController.forward();
+      //   } else {
+      //     _animationController.reverse();
+      //   }
+      // },
+      body:/*AnimatedBuilder(
+        animation: _animationController,
+        builder: (context, child1) {
+          return Stack(
+            children: <Widget>[
+              Positioned(
+                top: 0,
+                left: _animation.value,
+                right: -_animation.value,
+                child:appbar,
+              ),
+              Positioned(
+                top: 56,
+                left: _animation.value ,
+                right: -_animation.value,
+                bottom: 0,
+                child: child1!,
+              ),
+            ],
+          );
+        },
+        child: Center(
+          child: Chat(
+            messages: _messages,
+            // onAttachmentPressed: _handleAttachmentPressed,
+            onMessageTap: _handleMessageTap,
+            onPreviewDataFetched: _handlePreviewDataFetched,
+            onSendPressed: _handleSendPressed,
+            showUserAvatars: true,
+            showUserNames: true,
+            user: _user,
+            theme: DefaultChatTheme(
+              backgroundColor: colorScheme.background,
+              seenIcon: Text(
+                'read',
+                style: textTheme.bodySmall,
+              ),
+            ),
           ),
         ),
-      ),
+      )*/
+
+
+      AnimatedBuilder(
+        animation: _animationController,
+        builder: (context, child) {
+          return Transform.translate(
+            offset: Offset(_animation.value, 0),
+            child: child,
+          );
+        },
+        child: Chat(
+          messages: _messages,
+          // onAttachmentPressed: _handleAttachmentPressed,
+          onMessageTap: _handleMessageTap,
+          onPreviewDataFetched: _handlePreviewDataFetched,
+          onSendPressed: _handleSendPressed,
+          showUserAvatars: true,
+          showUserNames: true,
+          user: _user,
+          theme: DefaultChatTheme(
+            backgroundColor: colorScheme.background,
+            seenIcon: Text(
+              'read',
+              style: textTheme.bodySmall,
+            ),
+          ),
+        ),
+      ) ,
     );
   }
 }

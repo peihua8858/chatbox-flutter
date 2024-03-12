@@ -33,8 +33,13 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageState extends State<SettingsPage> with TickerProviderStateMixin {
   _ExpandableSetting? _expandedSettingId;
+  final List<String> _tabs = [
+    'Tab 1',
+    'Tab 2',
+    'Tab 3',
+  ];
 
   void onTapSetting(_ExpandableSetting settingId) {
     setState(() {
@@ -54,14 +59,20 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  final PageController _pageController = PageController();
+  late TabController tabController;
+
+
   @override
   void initState() {
     super.initState();
+    tabController= TabController(length: _tabs.length, vsync: this);
   }
 
   @override
   void dispose() {
     super.dispose();
+    tabController.dispose();
   }
 
   /// Given a [Locale], returns a [DisplayOption] with its native name for a
@@ -73,7 +84,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final localeName = LocaleNames.of(context)!.nameOf(localeCode);
     if (localeName != null) {
       final localeNativeName =
-      LocaleNamesLocalizationsDelegate.nativeLocaleNames[localeCode];
+          LocaleNamesLocalizationsDelegate.nativeLocaleNames[localeCode];
       return localeNativeName != null
           ? DisplayOption(localeNativeName, subtitle: localeName)
           : DisplayOption(localeName);
@@ -108,7 +119,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     });
     var supportedLocales =
-    List<Locale>.from(ChatBoxLocalizations.supportedLocales);
+        List<Locale>.from(ChatBoxLocalizations.supportedLocales);
     supportedLocales.removeWhere((locale) => locale == deviceLocale);
 
     final displayLocales = Map<Locale, DisplayOption>.fromIterable(
@@ -149,38 +160,38 @@ class _SettingsPageState extends State<SettingsPage> {
         builder: (builder) {
           return SafeArea(
               child: Column(children: [
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    CommWidget.buttonWidget(
-                        title: local.dialogCancel,
-                        textStyle: const TextStyle(color: Colors.black),
-                        callback: () {
-                          Navigator.of(context).pop();
-                        }),
-                    Expanded(child: Container()),
-                    CommWidget.buttonWidget(
-                        title: local.sure,
-                        textStyle: const TextStyle(color: Colors.black),
-                        callback: () {
-                          onChanged(selItem);
-                          Navigator.of(context).pop();
-                        })
-                  ],
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    SinglePickerWidget(
-                        optionsMap: optionsMap,
-                        onChanged: (item) {
-                          selItem = item;
-                        },
-                        value: selectOptions)
-                  ],
-                )
-              ]));
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                CommWidget.buttonWidget(
+                    title: local.dialogCancel,
+                    textStyle: const TextStyle(color: Colors.black),
+                    callback: () {
+                      Navigator.of(context).pop();
+                    }),
+                Expanded(child: Container()),
+                CommWidget.buttonWidget(
+                    title: local.sure,
+                    textStyle: const TextStyle(color: Colors.black),
+                    callback: () {
+                      onChanged(selItem);
+                      Navigator.of(context).pop();
+                    })
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                SinglePickerWidget(
+                    optionsMap: optionsMap,
+                    onChanged: (item) {
+                      selItem = item;
+                    },
+                    value: selectOptions)
+              ],
+            )
+          ]));
         });
   }
 
@@ -239,135 +250,159 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     });
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localizations.settingsTitle,
-            style: themes.appBarTheme.titleTextStyle),
-        iconTheme: themes.appBarTheme.iconTheme,
-        actionsIconTheme: themes.appBarTheme.actionsIconTheme,
-        titleTextStyle: themes.appBarTheme.titleTextStyle,
-      ),
-      body: Material(
-        color: colorScheme.background,
-        child: Padding(
-          padding: isDesktop
-              ? EdgeInsets.zero
-              : const EdgeInsets.only(
-            bottom: galleryHeaderHeight,
-          ),
-          child: ListView(
-            children: [
-              const SizedBox(height: 12),
-              SettingsListItem(
-                optionsMap: textScalingData,
-                title: localizations.settingsTextScaling,
-                selectedOption: options.textScaleFactor(
-                  context,
-                  useSentinel: true,
-                ),
-                onTapSetting: () {
-                  showSettingsOptionsDialog(
-                      textScalingData,
-                      options.textScaleFactor(
-                        context,
-                        useSentinel: true,
-                      ), (newTextScale) {
-                    ChatBoxOptions.update(
-                      context,
-                      options.copyWith(textScaleFactor: newTextScale),
-                    );
-                  });
-                },
-                isExpanded: false,
-              ),
-              const SizedBox(height: 12),
-              SettingsListItem(
-                optionsMap: textDirectionData,
-                title: localizations.settingsTextDirection,
-                selectedOption: options.customTextDirection,
-                onTapSetting: () {
-                  showSettingsOptionsDialog(
-                      textDirectionData, options.customTextDirection,
-                          (newTextDirection) {
-                        ChatBoxOptions.update(
-                          context,
-                          options.copyWith(customTextDirection: newTextDirection),
-                        );
-                      });
-                },
-                isExpanded: false,
-              ),
-              const SizedBox(height: 12),
-              SettingsListItem(
-                optionsMap: _getLocaleOptions(),
-                title: localizations.settingsLocale,
-                selectedOption: options.locale == deviceLocale
-                    ? systemLocaleOption
-                    : options.locale,
-                onTapSetting: () {
-                  showSettingsOptionsDialog(
-                      _getLocaleOptions(),
-                      options.locale == deviceLocale
-                          ? systemLocaleOption
-                          : options.locale, (newLocale) {
-                    if (newLocale == systemLocaleOption) {
-                      newLocale = deviceLocale;
-                    }
-                    ChatBoxOptions.update(
-                      context,
-                      options.copyWith(locale: newLocale),
-                    );
-                  });
-                },
-                isExpanded: false,
-              ),
-              const SizedBox(height: 12),
-              SettingsListItem(
-                optionsMap: platformData,
-                title: localizations.settingsPlatformMechanics,
-                selectedOption: options.platform,
-                onTapSetting: () {
-                  showSettingsOptionsDialog(platformData, options.platform,
-                          (newPlatform) {
-                        ChatBoxOptions.update(
-                          context,
-                          options.copyWith(platform: newPlatform),
-                        );
-                      });
-                },
-                isExpanded: false,
-              ),
-              const SizedBox(height: 12),
-              SettingsListItem(
-                optionsMap: themesData,
-                title: localizations.settingsTheme,
-                selectedOption: options.themeMode,
-                onTapSetting: () {
-                  showSettingsOptionsDialog(themesData, options.themeMode,
-                          (newThemeMode) {
-                        ChatBoxOptions.update(
-                          context,
-                          options.copyWith(themeMode: newThemeMode),
-                        );
-                      });
-                },
-                isExpanded: false,
-              ),
-              const SizedBox(height: 12),
-              ToggleSetting(
-                text: ChatBoxLocalizations.of(context)!.settingsSlowMotion,
-                value: options.timeDilation != 1.0,
-                onChanged: (isOn) => ChatBoxOptions.update(
-                  context,
-                  options.copyWith(timeDilation: isOn ? 5.0 : 1.0),
-                ),
-              )
-            ],
+        appBar: AppBar(
+          title: Text(localizations.settingsTitle,
+              style: themes.appBarTheme.titleTextStyle),
+          iconTheme: themes.appBarTheme.iconTheme,
+          actionsIconTheme: themes.appBarTheme.actionsIconTheme,
+          titleTextStyle: themes.appBarTheme.titleTextStyle,
+          bottom: TabBar(
+            // controller: DefaultTabController.maybeOf(context),
+            tabs: _tabs.map((String tab) {
+              return Tab(text: tab);
+            }).toList(),
+            onTap: (index) {
+              _pageController.jumpToPage(index);
+            },
           ),
         ),
-      ),
-    );
-  }
+        body: PageView.builder(
+          controller: _pageController,
+          itemCount: _tabs.length,
+          itemBuilder: (context, index) {
+            return Center(
+              child: Text(
+                _tabs[index],
+                style: TextStyle(fontSize: 24.0),
+              ),
+            );
+          },
+          onPageChanged: (index) {
+            tabController.animateTo(index);
+          },
+        )
 
+        // Material(
+        //   color: colorScheme.background,
+        //   child: Padding(
+        //     padding: isDesktop
+        //         ? EdgeInsets.zero
+        //         : const EdgeInsets.only(
+        //             bottom: galleryHeaderHeight,
+        //           ),
+        // child: ListView(
+        //   children: [
+        //     const SizedBox(height: 12),
+        //     SettingsListItem(
+        //       optionsMap: textScalingData,
+        //       title: localizations.settingsTextScaling,
+        //       selectedOption: options.textScaleFactor(
+        //         context,
+        //         useSentinel: true,
+        //       ),
+        //       onTapSetting: () {
+        //         showSettingsOptionsDialog(
+        //             textScalingData,
+        //             options.textScaleFactor(
+        //               context,
+        //               useSentinel: true,
+        //             ), (newTextScale) {
+        //           ChatBoxOptions.update(
+        //             context,
+        //             options.copyWith(textScaleFactor: newTextScale),
+        //           );
+        //         });
+        //       },
+        //       isExpanded: false,
+        //     ),
+        //     const SizedBox(height: 12),
+        //     SettingsListItem(
+        //       optionsMap: textDirectionData,
+        //       title: localizations.settingsTextDirection,
+        //       selectedOption: options.customTextDirection,
+        //       onTapSetting: () {
+        //         showSettingsOptionsDialog(
+        //             textDirectionData, options.customTextDirection,
+        //             (newTextDirection) {
+        //           ChatBoxOptions.update(
+        //             context,
+        //             options.copyWith(customTextDirection: newTextDirection),
+        //           );
+        //         });
+        //       },
+        //       isExpanded: false,
+        //     ),
+        //     const SizedBox(height: 12),
+        //     SettingsListItem(
+        //       optionsMap: _getLocaleOptions(),
+        //       title: localizations.settingsLocale,
+        //       selectedOption: options.locale == deviceLocale
+        //           ? systemLocaleOption
+        //           : options.locale,
+        //       onTapSetting: () {
+        //         showSettingsOptionsDialog(
+        //             _getLocaleOptions(),
+        //             options.locale == deviceLocale
+        //                 ? systemLocaleOption
+        //                 : options.locale, (newLocale) {
+        //           if (newLocale == systemLocaleOption) {
+        //             newLocale = deviceLocale;
+        //           }
+        //           ChatBoxOptions.update(
+        //             context,
+        //             options.copyWith(locale: newLocale),
+        //           );
+        //         });
+        //       },
+        //       isExpanded: false,
+        //     ),
+        //     const SizedBox(height: 12),
+        //     SettingsListItem(
+        //       optionsMap: platformData,
+        //       title: localizations.settingsPlatformMechanics,
+        //       selectedOption: options.platform,
+        //       onTapSetting: () {
+        //         showSettingsOptionsDialog(platformData, options.platform,
+        //             (newPlatform) {
+        //           ChatBoxOptions.update(
+        //             context,
+        //             options.copyWith(platform: newPlatform),
+        //           );
+        //         });
+        //       },
+        //       isExpanded: false,
+        //     ),
+        //     const SizedBox(height: 12),
+        //     SettingsListItem(
+        //       optionsMap: themesData,
+        //       title: localizations.settingsTheme,
+        //       selectedOption: options.themeMode,
+        //       onTapSetting: () {
+        //         showSettingsOptionsDialog(themesData, options.themeMode,
+        //             (newThemeMode) {
+        //           ChatBoxOptions.update(
+        //             context,
+        //             options.copyWith(themeMode: newThemeMode),
+        //           );
+        //         });
+        //       },
+        //       isExpanded: false,
+        //     ),
+        //     const SizedBox(height: 12),
+        //     ToggleSetting(
+        //       text: ChatBoxLocalizations.of(context)!.settingsSlowMotion,
+        //       value: options.timeDilation != 1.0,
+        //       onChanged: (isOn) => ChatBoxOptions.update(
+        //         context,
+        //         options.copyWith(timeDilation: isOn ? 5.0 : 1.0),
+        //       ),
+        //     )
+        //   ],
+        // ),
+        // ),
+        // ),
+        );
+  }
 }
 
 class Header extends StatelessWidget {
@@ -388,10 +423,10 @@ class Header extends StatelessWidget {
         child: SelectableText(
           text,
           style: Theme.of(context).textTheme.headlineMedium!.apply(
-            color: color,
-            fontSizeDelta:
-            isDisplayDesktop(context) ? desktopDisplay1FontDelta : 0,
-          ),
+                color: color,
+                fontSizeDelta:
+                    isDisplayDesktop(context) ? desktopDisplay1FontDelta : 0,
+              ),
         ),
       ),
     );
@@ -423,7 +458,7 @@ class SettingsFeedback extends StatelessWidget {
       icon: Icons.feedback,
       onTap: () async {
         final url =
-        Uri.parse('https://github.com/flutter/gallery/issues/new/choose/');
+            Uri.parse('https://github.com/flutter/gallery/issues/new/choose/');
         if (await canLaunchUrl(url)) {
           await launchUrl(url);
         }
@@ -450,9 +485,9 @@ class SettingsAttribution extends StatelessWidget {
         child: SelectableText(
           ChatBoxLocalizations.of(context)!.settingsAttribution,
           style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onSecondary,
-          ),
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSecondary,
+              ),
           textAlign: isDesktop ? TextAlign.end : TextAlign.start,
         ),
       ),
