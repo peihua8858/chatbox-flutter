@@ -28,7 +28,7 @@ Locale? _deviceLocale;
 Locale? get deviceLocale => _deviceLocale;
 
 set deviceLocale(Locale? locale) {
-  _deviceLocale ??= locale;
+  _deviceLocale = locale;
 }
 
 class ChatBoxOptions {

@@ -16,14 +16,7 @@ import 'SettingsOptionsDialog.dart' as settingsOptions;
 
 import '../../widgets/CommWidget.dart';
 
-enum _ExpandableSetting {
-  textScale,
-  textDirection,
-  locale,
-  platform,
-  theme,
-}
-
+///设置页面
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
     super.key,
@@ -33,40 +26,21 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> with TickerProviderStateMixin {
-  _ExpandableSetting? _expandedSettingId;
+class _SettingsPageState extends State<SettingsPage>
+    with TickerProviderStateMixin {
   final List<String> _tabs = [
-    'Tab 1',
-    'Tab 2',
-    'Tab 3',
+    '模型',
+    '显示',
+    '对话',
+    '其他',
   ];
 
-  void onTapSetting(_ExpandableSetting settingId) {
-    setState(() {
-      if (_expandedSettingId == settingId) {
-        _expandedSettingId = null;
-      } else {
-        _expandedSettingId = settingId;
-      }
-    });
-  }
-
-  void _closeSettingId(AnimationStatus status) {
-    if (status == AnimationStatus.dismissed) {
-      setState(() {
-        _expandedSettingId = null;
-      });
-    }
-  }
-
-  final PageController _pageController = PageController();
   late TabController tabController;
-
 
   @override
   void initState() {
     super.initState();
-    tabController= TabController(length: _tabs.length, vsync: this);
+    tabController = TabController(length: _tabs.length, vsync: this);
   }
 
   @override
@@ -75,79 +49,59 @@ class _SettingsPageState extends State<SettingsPage> with TickerProviderStateMix
     tabController.dispose();
   }
 
-  /// Given a [Locale], returns a [DisplayOption] with its native name for a
-  /// title and its name in the currently selected locale for a subtitle. If the
-  /// native name can't be determined, it is omitted. If the locale can't be
-  /// determined, the locale code is used.
-  DisplayOption _getLocaleDisplayOption(BuildContext context, Locale? locale) {
-    final localeCode = locale.toString();
-    final localeName = LocaleNames.of(context)!.nameOf(localeCode);
-    if (localeName != null) {
-      final localeNativeName =
-          LocaleNamesLocalizationsDelegate.nativeLocaleNames[localeCode];
-      return localeNativeName != null
-          ? DisplayOption(localeNativeName, subtitle: localeName)
-          : DisplayOption(localeName);
-    } else {
-      // gsw, fil, and es_419 aren't in flutter_localized_countries' dataset
-      // so we handle them separately
-      switch (localeCode) {
-        case 'gsw':
-          return DisplayOption('Schwiizertüütsch', subtitle: 'Swiss German');
-        case 'fil':
-          return DisplayOption('Filipino', subtitle: 'Filipino');
-        case 'es_419':
-          return DisplayOption(
-            'español (Latinoamérica)',
-            subtitle: 'Spanish (Latin America)',
-          );
-      }
-    }
-
-    return DisplayOption(localeCode);
+  @override
+  Widget build(BuildContext context) {
+    final themes = Theme.of(context);
+    final localizations = ChatBoxLocalizations.of(context)!;
+    final appBarTheme = themes.appBarTheme;
+    return Scaffold(
+        appBar: AppBar(
+          title: Text(localizations.settingsTitle,
+              style: appBarTheme.titleTextStyle),
+          iconTheme: appBarTheme.iconTheme,
+          actionsIconTheme: appBarTheme.actionsIconTheme,
+          titleTextStyle: appBarTheme.titleTextStyle,
+          bottom: TabBar(
+            controller: tabController,
+            tabs: _tabs.map((String tab) {
+              return Tab(text: tab);
+            }).toList(),
+            // onTap: (index) {
+            // _pageController.jumpToPage(index);
+            // },
+          ),
+        ),
+        body: TabBarView(
+          controller: tabController,
+          children: const [
+            ModelSettingWidget(),
+            DisplaySettings(),
+            SettingsFeedback(),
+            SettingsAbout()
+          ],
+        ));
   }
+}
 
-  /// Create a sorted — by native name – map of supported locales to their
-  /// intended display string, with a system option as the first element.
-  LinkedHashMap<Locale, DisplayOption> _getLocaleOptions() {
-    var localeOptions = LinkedHashMap.of({
-      systemLocaleOption: DisplayOption(
-        ChatBoxLocalizations.of(context)!.settingsSystemDefault +
-            (deviceLocale != null
-                ? ' - ${_getLocaleDisplayOption(context, deviceLocale).title}'
-                : ''),
-      ),
-    });
-    var supportedLocales =
-        List<Locale>.from(ChatBoxLocalizations.supportedLocales);
-    supportedLocales.removeWhere((locale) => locale == deviceLocale);
+///模型配置
+class ModelSettingWidget extends StatelessWidget {
+  const ModelSettingWidget({super.key});
 
-    final displayLocales = Map<Locale, DisplayOption>.fromIterable(
-      supportedLocales,
-      value: (dynamic locale) =>
-          _getLocaleDisplayOption(context, locale as Locale?),
-    ).entries.toList()
-      ..sort((l1, l2) => compareAsciiUpperCase(l1.value.title, l2.value.title));
-
-    localeOptions.addAll(LinkedHashMap.fromEntries(displayLocales));
-    return localeOptions;
-  }
-
-  void showSettingsOptionsDialog<K, V>(
+  void showSettingsOptionsDialog<K, V>(BuildContext context,
       LinkedHashMap<K, V> optionsMap, var selectOptions, Function onChanged) {
-    // if (isDisplayDesktop(context)) {
-    settingsOptions.showSettingsOptionsDialog(
-      context: context,
-      optionsMap: optionsMap,
-      selectOptions: selectOptions,
-      onChanged: onChanged,
-    );
-    // } else {
-    //   showBottomSheetDialog(optionsMap, selectOptions, onChanged);
-    // }
+    if (isDisplayDesktop(context)) {
+      settingsOptions.showSettingsOptionsDialog(
+        context: context,
+        optionsMap: optionsMap,
+        selectOptions: selectOptions,
+        onChanged: onChanged,
+      );
+    } else {
+      showBottomSheetDialog(context, optionsMap, selectOptions, onChanged);
+    }
   }
 
-  void showBottomSheetDialog<K, V>(
+  void showBottomSheetDialog<K, V>(BuildContext context,
       LinkedHashMap<K, V> optionsMap, var selectOptions, Function onChanged) {
     final local = ChatBoxLocalizations.of(context)!;
     var selItem;
@@ -195,11 +149,68 @@ class _SettingsPageState extends State<SettingsPage> with TickerProviderStateMix
         });
   }
 
+  /// Create a sorted — by native name – map of supported locales to their
+  /// intended display string, with a system option as the first element.
+  LinkedHashMap<Locale, DisplayOption> _getLocaleOptions(BuildContext context) {
+    var localeOptions = LinkedHashMap.of({
+      systemLocaleOption: DisplayOption(
+        ChatBoxLocalizations.of(context)!.settingsSystemDefault +
+            (deviceLocale != null
+                ? ' - ${_getLocaleDisplayOption(context, deviceLocale).title}'
+                : ''),
+      ),
+    });
+    var supportedLocales =
+        List<Locale>.from(ChatBoxLocalizations.supportedLocales);
+    supportedLocales.removeWhere((locale) => locale == deviceLocale);
+
+    final displayLocales = Map<Locale, DisplayOption>.fromIterable(
+      supportedLocales,
+      value: (dynamic locale) =>
+          _getLocaleDisplayOption(context, locale as Locale?),
+    ).entries.toList()
+      ..sort((l1, l2) => compareAsciiUpperCase(l1.value.title, l2.value.title));
+
+    localeOptions.addAll(LinkedHashMap.fromEntries(displayLocales));
+    return localeOptions;
+  }
+
+  /// Given a [Locale], returns a [DisplayOption] with its native name for a
+  /// title and its name in the currently selected locale for a subtitle. If the
+  /// native name can't be determined, it is omitted. If the locale can't be
+  /// determined, the locale code is used.
+  DisplayOption _getLocaleDisplayOption(BuildContext context, Locale? locale) {
+    final localeCode = locale.toString();
+    final localeName = LocaleNames.of(context)!.nameOf(localeCode);
+    if (localeName != null) {
+      final localeNativeName =
+          LocaleNamesLocalizationsDelegate.nativeLocaleNames[localeCode];
+      return localeNativeName != null
+          ? DisplayOption(localeNativeName, subtitle: localeName)
+          : DisplayOption(localeName);
+    } else {
+      // gsw, fil, and es_419 aren't in flutter_localized_countries' dataset
+      // so we handle them separately
+      switch (localeCode) {
+        case 'gsw':
+          return DisplayOption('Schwiizertüütsch', subtitle: 'Swiss German');
+        case 'fil':
+          return DisplayOption('Filipino', subtitle: 'Filipino');
+        case 'es_419':
+          return DisplayOption(
+            'español (Latinoamérica)',
+            subtitle: 'Spanish (Latin America)',
+          );
+      }
+    }
+
+    return DisplayOption(localeCode);
+  }
+
   @override
   Widget build(BuildContext context) {
     final themes = Theme.of(context);
     final colorScheme = themes.colorScheme;
-    final appbarTheme = themes.appBarTheme;
     final options = ChatBoxOptions.of(context);
     final isDesktop = isDisplayDesktop(context);
     final localizations = ChatBoxLocalizations.of(context)!;
@@ -249,190 +260,240 @@ class _SettingsPageState extends State<SettingsPage> with TickerProviderStateMix
         localizations.settingsLightTheme,
       ),
     });
-    return Scaffold(
-        appBar: AppBar(
-          title: Text(localizations.settingsTitle,
-              style: themes.appBarTheme.titleTextStyle),
-          iconTheme: themes.appBarTheme.iconTheme,
-          actionsIconTheme: themes.appBarTheme.actionsIconTheme,
-          titleTextStyle: themes.appBarTheme.titleTextStyle,
-          bottom: TabBar(
-            // controller: DefaultTabController.maybeOf(context),
-            tabs: _tabs.map((String tab) {
-              return Tab(text: tab);
-            }).toList(),
-            onTap: (index) {
-              _pageController.jumpToPage(index);
-            },
-          ),
-        ),
-        body: PageView.builder(
-          controller: _pageController,
-          itemCount: _tabs.length,
-          itemBuilder: (context, index) {
-            return Center(
-              child: Text(
-                _tabs[index],
-                style: TextStyle(fontSize: 24.0),
-              ),
-            );
-          },
-          onPageChanged: (index) {
-            tabController.animateTo(index);
-          },
-        )
-
-        // Material(
-        //   color: colorScheme.background,
-        //   child: Padding(
-        //     padding: isDesktop
-        //         ? EdgeInsets.zero
-        //         : const EdgeInsets.only(
-        //             bottom: galleryHeaderHeight,
-        //           ),
-        // child: ListView(
-        //   children: [
-        //     const SizedBox(height: 12),
-        //     SettingsListItem(
-        //       optionsMap: textScalingData,
-        //       title: localizations.settingsTextScaling,
-        //       selectedOption: options.textScaleFactor(
-        //         context,
-        //         useSentinel: true,
-        //       ),
-        //       onTapSetting: () {
-        //         showSettingsOptionsDialog(
-        //             textScalingData,
-        //             options.textScaleFactor(
-        //               context,
-        //               useSentinel: true,
-        //             ), (newTextScale) {
-        //           ChatBoxOptions.update(
-        //             context,
-        //             options.copyWith(textScaleFactor: newTextScale),
-        //           );
-        //         });
-        //       },
-        //       isExpanded: false,
-        //     ),
-        //     const SizedBox(height: 12),
-        //     SettingsListItem(
-        //       optionsMap: textDirectionData,
-        //       title: localizations.settingsTextDirection,
-        //       selectedOption: options.customTextDirection,
-        //       onTapSetting: () {
-        //         showSettingsOptionsDialog(
-        //             textDirectionData, options.customTextDirection,
-        //             (newTextDirection) {
-        //           ChatBoxOptions.update(
-        //             context,
-        //             options.copyWith(customTextDirection: newTextDirection),
-        //           );
-        //         });
-        //       },
-        //       isExpanded: false,
-        //     ),
-        //     const SizedBox(height: 12),
-        //     SettingsListItem(
-        //       optionsMap: _getLocaleOptions(),
-        //       title: localizations.settingsLocale,
-        //       selectedOption: options.locale == deviceLocale
-        //           ? systemLocaleOption
-        //           : options.locale,
-        //       onTapSetting: () {
-        //         showSettingsOptionsDialog(
-        //             _getLocaleOptions(),
-        //             options.locale == deviceLocale
-        //                 ? systemLocaleOption
-        //                 : options.locale, (newLocale) {
-        //           if (newLocale == systemLocaleOption) {
-        //             newLocale = deviceLocale;
-        //           }
-        //           ChatBoxOptions.update(
-        //             context,
-        //             options.copyWith(locale: newLocale),
-        //           );
-        //         });
-        //       },
-        //       isExpanded: false,
-        //     ),
-        //     const SizedBox(height: 12),
-        //     SettingsListItem(
-        //       optionsMap: platformData,
-        //       title: localizations.settingsPlatformMechanics,
-        //       selectedOption: options.platform,
-        //       onTapSetting: () {
-        //         showSettingsOptionsDialog(platformData, options.platform,
-        //             (newPlatform) {
-        //           ChatBoxOptions.update(
-        //             context,
-        //             options.copyWith(platform: newPlatform),
-        //           );
-        //         });
-        //       },
-        //       isExpanded: false,
-        //     ),
-        //     const SizedBox(height: 12),
-        //     SettingsListItem(
-        //       optionsMap: themesData,
-        //       title: localizations.settingsTheme,
-        //       selectedOption: options.themeMode,
-        //       onTapSetting: () {
-        //         showSettingsOptionsDialog(themesData, options.themeMode,
-        //             (newThemeMode) {
-        //           ChatBoxOptions.update(
-        //             context,
-        //             options.copyWith(themeMode: newThemeMode),
-        //           );
-        //         });
-        //       },
-        //       isExpanded: false,
-        //     ),
-        //     const SizedBox(height: 12),
-        //     ToggleSetting(
-        //       text: ChatBoxLocalizations.of(context)!.settingsSlowMotion,
-        //       value: options.timeDilation != 1.0,
-        //       onChanged: (isOn) => ChatBoxOptions.update(
-        //         context,
-        //         options.copyWith(timeDilation: isOn ? 5.0 : 1.0),
-        //       ),
-        //     )
-        //   ],
-        // ),
-        // ),
-        // ),
-        );
-  }
-}
-
-class Header extends StatelessWidget {
-  const Header({super.key, required this.color, required this.text});
-
-  final Color color;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
+    return Material(
+      color: colorScheme.background,
       child: Padding(
-        padding: EdgeInsets.only(
-          top: isDisplayDesktop(context) ? 63 : 15,
-          bottom: isDisplayDesktop(context) ? 21 : 11,
-        ),
-        child: SelectableText(
-          text,
-          style: Theme.of(context).textTheme.headlineMedium!.apply(
-                color: color,
-                fontSizeDelta:
-                    isDisplayDesktop(context) ? desktopDisplay1FontDelta : 0,
+        padding: isDesktop
+            ? EdgeInsets.zero
+            : const EdgeInsets.only(
+                bottom: galleryHeaderHeight,
               ),
+        child: ListView(
+          children: [
+            const SizedBox(height: 12),
+            SettingsListItem(
+              optionsMap: textScalingData,
+              title: localizations.settingsTextScaling,
+              selectedOption: options.textScaleFactor(
+                context,
+                useSentinel: true,
+              ),
+              onTapSetting: () {
+                showSettingsOptionsDialog(
+                    context,
+                    textScalingData,
+                    options.textScaleFactor(
+                      context,
+                      useSentinel: true,
+                    ), (newTextScale) {
+                  ChatBoxOptions.update(
+                    context,
+                    options.copyWith(textScaleFactor: newTextScale),
+                  );
+                });
+              },
+              isExpanded: false,
+            ),
+            const SizedBox(height: 12),
+            SettingsListItem(
+              optionsMap: textDirectionData,
+              title: localizations.settingsTextDirection,
+              selectedOption: options.customTextDirection,
+              onTapSetting: () {
+                showSettingsOptionsDialog(
+                    context, textDirectionData, options.customTextDirection,
+                    (newTextDirection) {
+                  ChatBoxOptions.update(
+                    context,
+                    options.copyWith(customTextDirection: newTextDirection),
+                  );
+                });
+              },
+              isExpanded: false,
+            ),
+            const SizedBox(height: 12),
+            SettingsListItem(
+              optionsMap: _getLocaleOptions(context),
+              title: localizations.settingsLocale,
+              selectedOption: options.locale == deviceLocale
+                  ? systemLocaleOption
+                  : options.locale,
+              onTapSetting: () {
+                showSettingsOptionsDialog(
+                    context,
+                    _getLocaleOptions(context),
+                    options.locale == deviceLocale
+                        ? systemLocaleOption
+                        : options.locale, (newLocale) {
+                  if (newLocale == systemLocaleOption) {
+                    newLocale = deviceLocale;
+                  }
+                  ChatBoxOptions.update(
+                    context,
+                    options.copyWith(locale: newLocale),
+                  );
+                });
+              },
+              isExpanded: false,
+            ),
+            const SizedBox(height: 12),
+            SettingsListItem(
+              optionsMap: platformData,
+              title: localizations.settingsPlatformMechanics,
+              selectedOption: options.platform,
+              onTapSetting: () {
+                showSettingsOptionsDialog(
+                    context, platformData, options.platform, (newPlatform) {
+                  ChatBoxOptions.update(
+                    context,
+                    options.copyWith(platform: newPlatform),
+                  );
+                });
+              },
+              isExpanded: false,
+            ),
+            const SizedBox(height: 12),
+            SettingsListItem(
+              optionsMap: themesData,
+              title: localizations.settingsTheme,
+              selectedOption: options.themeMode,
+              onTapSetting: () {
+                showSettingsOptionsDialog(
+                    context, themesData, options.themeMode, (newThemeMode) {
+                  ChatBoxOptions.update(
+                    context,
+                    options.copyWith(themeMode: newThemeMode),
+                  );
+                });
+              },
+              isExpanded: false,
+            ),
+            const SizedBox(height: 12),
+            ToggleSetting(
+              text: ChatBoxLocalizations.of(context)!.settingsSlowMotion,
+              value: options.timeDilation != 1.0,
+              onChanged: (isOn) => ChatBoxOptions.update(
+                context,
+                options.copyWith(timeDilation: isOn ? 5.0 : 1.0),
+              ),
+            )
+          ],
         ),
       ),
     );
   }
 }
 
+///显示设置
+class DisplaySettings extends StatelessWidget {
+  const DisplaySettings({super.key});
+
+  /// Create a sorted — by native name – map of supported locales to their
+  /// intended display string, with a system option as the first element.
+  List<LangDisplayOption> _getLocaleOptions(BuildContext context) {
+    List<LangDisplayOption> localeOptions = [];
+    final curLocal = deviceLocale;
+    if (curLocal != null) {
+     final curOption= _getLocaleDisplayOption(context, curLocal);
+      localeOptions.add(LangDisplayOption(
+          curLocal,
+          '${ChatBoxLocalizations.of(context)!.settingsSystemDefault} - ${curOption.title}'));
+    }
+
+    var supportedLocales =
+        List<Locale>.from(ChatBoxLocalizations.supportedLocales);
+    supportedLocales.removeWhere((locale) => locale == curLocal);
+    for (var element in supportedLocales) {
+      localeOptions.add(_getLocaleDisplayOption(context, element));
+    }
+    return localeOptions;
+  }
+
+  /// Given a [Locale], returns a [DisplayOption] with its native name for a
+  /// title and its name in the currently selected locale for a subtitle. If the
+  /// native name can't be determined, it is omitted. If the locale can't be
+  /// determined, the locale code is used.
+  LangDisplayOption _getLocaleDisplayOption(
+      BuildContext context, Locale locale) {
+    final localeCode = locale.toString();
+    final localeName = LocaleNames.of(context)!.nameOf(localeCode);
+    if (localeName != null) {
+      final localeNativeName =
+          LocaleNamesLocalizationsDelegate.nativeLocaleNames[localeCode];
+      return localeNativeName != null
+          ? LangDisplayOption(locale, localeNativeName, subtitle: localeName)
+          : LangDisplayOption(locale, localeName);
+    } else {
+      // gsw, fil, and es_419 aren't in flutter_localized_countries' dataset
+      // so we handle them separately
+      switch (localeCode) {
+        case 'gsw':
+          return LangDisplayOption(locale, 'Schwiizertüütsch',
+              subtitle: 'Swiss German');
+        case 'fil':
+          return LangDisplayOption(locale, 'Filipino', subtitle: 'Filipino');
+        case 'es_419':
+          return LangDisplayOption(
+            locale,
+            'español (Latinoamérica)',
+            subtitle: 'Spanish (Latin America)',
+          );
+      }
+    }
+
+    return LangDisplayOption(locale, localeCode);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themes = Theme.of(context);
+    final colorScheme = themes.colorScheme;
+    var textTheme=themes.textTheme;
+    final options = ChatBoxOptions.of(context);
+    final isDesktop = isDisplayDesktop(context);
+    final localizations = ChatBoxLocalizations.of(context)!;
+    final langOptions = _getLocaleOptions(context);
+    var selectOption =
+        langOptions.firstWhere((element) => element.locale == deviceLocale);
+    var menus = langOptions.map<DropdownMenuItem<LangDisplayOption>>((value) {
+      return DropdownMenuItem<LangDisplayOption>(
+        value: value,
+        child: Text(value.title),
+      );
+    }).toList();
+    return Material(
+        color: colorScheme.background,
+        child: Padding(
+            padding: isDesktop
+                ? EdgeInsets.zero
+                : const EdgeInsets.only(
+                    bottom: galleryHeaderHeight,
+                  ),
+            child: ListView(children: [
+              const SizedBox(height: 12),
+              DropdownButton(
+                  items: menus,
+                  value: selectOption,
+                  // value: options.locale == deviceLocale
+                  //     ? systemLocaleOption
+                  //     : options.locale,
+                  icon: const Icon(Icons.arrow_drop_down),
+                  iconSize: 24,
+                  elevation: 16,
+                  style:  textTheme.bodyMedium,
+                  underline: Container(
+                    height: 2,
+                    color: Colors.deepPurpleAccent,
+                  ),
+                  onChanged: (option) {}),
+              const SizedBox(height: 12),
+              DropdownButton(items: menus, onChanged: (option) {})
+            ])));
+  }
+}
+
+///
+/// 关于页面
 class SettingsAbout extends StatelessWidget {
   const SettingsAbout({super.key});
 
@@ -610,6 +671,7 @@ class _SettingsListItemState<T> extends State<SettingsListItem<T?>>
 
 class SettingItem extends StatelessWidget {
   const SettingItem({
+    super.key,
     this.margin,
     required this.padding,
     required this.borderRadius,

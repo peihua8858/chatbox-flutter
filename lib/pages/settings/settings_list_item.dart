@@ -9,7 +9,6 @@ const settingItemHeaderMargin = EdgeInsetsDirectional.fromSTEB(32, 0, 32, 8);
 class DisplayOption {
   final String title;
   final String? subtitle;
-
   DisplayOption(this.title, {this.subtitle});
 
   @override
@@ -17,7 +16,17 @@ class DisplayOption {
     return title;
   }
 }
+class LangDisplayOption {
+  final String title;
+  final String? subtitle;
+  final Locale locale;
+  LangDisplayOption(this.locale,this.title, {this.subtitle});
 
+  @override
+  String toString() {
+    return title;
+  }
+}
 class ToggleSetting extends StatelessWidget {
   final String text;
   final bool value;

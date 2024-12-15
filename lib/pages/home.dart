@@ -355,11 +355,13 @@ class _HomePageState extends State<HomePage>  with SingleTickerProviderStateMixi
           showUserNames: true,
           user: _user,
           theme: DefaultChatTheme(
-            backgroundColor: colorScheme.background,
+            backgroundColor: colorScheme.onPrimaryContainer,
             seenIcon: Text(
-              'read',
+              '佩华',
               style: textTheme.bodySmall,
             ),
+            inputBackgroundColor: colorScheme.onSecondary,
+            inputTextColor: colorScheme.onPrimary
           ),
         ),
       ) ,
